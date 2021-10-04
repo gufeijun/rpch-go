@@ -19,7 +19,7 @@ var (
 	errShortWrite           = errors.New("rpch: short write")
 	errClientClosed         = errors.New("rpch: call on a closed client")
 	errClientMultipleStream = errors.New("rpch: should at most have one stream request arg")
-	errBadResponse          = errors.New("rpch: return value and error can not be nil at the same time")
+	ErrBadResponse          = errors.New("rpch: response can not be nil at the same time error is nil too")
 )
 
 type protoError struct {
