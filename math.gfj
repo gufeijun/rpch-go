@@ -1,0 +1,28 @@
+service Math{
+    int32 Add1(int32,int32)
+    int32 Add2(Nums)
+    Result Add3(Nums)
+    Result Add4(Nums,Nums,istream)
+    string Add5(string,string)
+    string Add6(ostream,string,string)
+    void Add7(stream)
+    istream OpenFile1(void)
+    ostream OpenFile2(void)
+    stream  OpenFile3(void)
+    void Show(void)
+}
+
+message Result{
+    int32 R
+}
+
+message Nums{
+    int32 A
+    int32 B
+}
+
+message Proc{
+    string Desc
+    Nums Nums
+    Result Result
+}
