@@ -138,6 +138,9 @@ func (c *conn) sendResponse(rtns []reflect.Value, methodDesc *MethodDesc, seq ui
 }
 
 func (c *conn) marshal(v reflect.Value, typeKind uint16, typeName string) ([]byte, error) {
+	if v.IsNil() {
+		return nil, errBadResponse
+	}
 	switch typeKind {
 	case typeKind_Normal:
 		return builtinMarshal[v.Kind()](v), nil
