@@ -16,10 +16,11 @@ type Service struct {
 	Name    string
 }
 
-func BuildMethodDesc(v reflect.Value, method string, retTypeName string) *MethodDesc {
-	tt, _ := v.Type().MethodByName(method)
+func BuildMethodDesc(v interface{}, method string, retTypeName string) *MethodDesc {
+	vv := reflect.ValueOf(v)
+	tt, _ := vv.Type().MethodByName(method)
 	return &MethodDesc{
-		Method:      v.MethodByName(method),
+		Method:      vv.MethodByName(method),
 		MethodType:  tt.Func.Type(),
 		RetTypeName: retTypeName,
 		RetTypeKind: GetTypeKind(retTypeName),

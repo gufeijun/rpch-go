@@ -157,7 +157,6 @@ func checkServiceValidation(service *Service) {
 	}
 }
 
-//TODO 入参和反参只能有一个Stream
 func (svr *Server) Register(service *Service) {
 	if service == nil {
 		panic("register a nil service")
