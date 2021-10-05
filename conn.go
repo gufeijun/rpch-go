@@ -13,6 +13,7 @@ import (
 )
 
 const magic = 0x00686A6C
+const seqSize = 8
 
 type conn struct {
 	svr       *Server
@@ -20,14 +21,16 @@ type conn struct {
 	bufr      *bufio.Reader
 	bufw      *errBufWriter
 	closeOnce sync.Once
+	seqsBuf   []byte
 }
 
 func newConn(svr *Server, rwc net.Conn) *conn {
 	return &conn{
-		svr:  svr,
-		rwc:  rwc,
-		bufr: bufio.NewReader(rwc),
-		bufw: &errBufWriter{bufw: bufio.NewWriter(rwc)},
+		seqsBuf: make([]byte, seqSize),
+		svr:     svr,
+		rwc:     rwc,
+		bufr:    bufio.NewReader(rwc),
+		bufw:    &errBufWriter{bufw: bufio.NewWriter(rwc)},
 	}
 }
 
@@ -103,10 +106,7 @@ func (c *conn) readRequest() (req *request, err error) {
 	return
 }
 
-func (c *conn) sendError(err error, seq uint64) error {
-	seqs := make([]byte, 8)
-	put64(seqs, seq)
-	c.bufw.Write(seqs)
+func (c *conn) sendError(err error) error {
 	errMsg := err.Error()
 	headBuf := _putHeader(typeKind_Error, "", len(errMsg), func(buf []byte) {
 		copy(buf, []byte(errMsg))
@@ -115,35 +115,47 @@ func (c *conn) sendError(err error, seq uint64) error {
 	return c.bufw.err
 }
 
+func (c *conn) sendNoRtnValue() error {
+	headBuf := _putHeader(typeKind_NoRtnValue, "", 0, nil)
+	c.bufw.Write(headBuf)
+	return c.bufw.err
+}
+
 func (c *conn) sendResponse(rtns []reflect.Value, methodDesc *MethodDesc, seq uint64) error {
+	if methodDesc.RetTypeKind == typeKind_Stream {
+		//如果是返回stream的话，会有三个参数：stream，func()以及error
+		if !rtns[1].IsNil() {
+			defer rtns[1].Interface().(func())()
+		}
+	}
+	put64(c.seqsBuf, seq)
+	c.bufw.Write(c.seqsBuf)
 	e := rtns[len(rtns)-1]
 	if err := e.Interface(); err != nil {
-		return c.sendError(err.(error), seq)
+		return c.sendError(err.(error))
 	}
 	if len(rtns) == 1 {
-		return nil
+		return c.sendNoRtnValue()
 	}
 	buf, err := c.marshal(rtns[0], methodDesc.RetTypeKind, methodDesc.RetTypeName)
 	if err != nil {
 		return err
 	}
-	seqs := make([]byte, 8)
-	put64(seqs, seq)
-	c.bufw.Write(seqs)
 	c.bufw.Write(buf)
 	if c.bufw.err == nil && methodDesc.RetTypeKind == typeKind_Stream {
-		c.bufw.err = c.responseStream(rtns[0].Interface(), methodDesc.RetTypeName, true)
+		c.bufw.err = c.responseStream(rtns[0].Interface(), methodDesc.RetTypeName)
 	}
 	return c.bufw.err
 }
 
 func (c *conn) marshal(v reflect.Value, typeKind uint16, typeName string) ([]byte, error) {
+	if typeKind == typeKind_Normal {
+		return builtinMarshal[v.Kind()](v), nil
+	}
 	if v.IsNil() {
 		return nil, errBadResponse
 	}
 	switch typeKind {
-	case typeKind_Normal:
-		return builtinMarshal[v.Kind()](v), nil
 	case typeKind_Message:
 		data, err := json.Marshal(v.Interface())
 		if err != nil {
@@ -160,15 +172,7 @@ func (c *conn) marshal(v reflect.Value, typeKind uint16, typeName string) ([]byt
 	return nil, errInvalidKind
 }
 
-func (c *conn) responseStream(v interface{}, typeName string, close bool) error {
-	defer func() {
-		if !close {
-			return
-		}
-		if closer, ok := v.(interface{ Close() error }); ok {
-			closer.Close()
-		}
-	}()
+func (c *conn) responseStream(v interface{}, typeName string) error {
 	c.bufw.Flush()
 	switch typeName {
 	case "istream":

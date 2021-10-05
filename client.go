@@ -105,7 +105,7 @@ func (client *Client) call(requestLine string, args []*RequestArg) (resp interfa
 	}
 	client.conn.bufw.Flush()
 	if reqStreamArg != nil {
-		err = client.conn.responseStream(reqStreamArg.Data, reqStreamArg.TypeName, false)
+		err = client.conn.responseStream(reqStreamArg.Data, reqStreamArg.TypeName)
 		if err != nil {
 			return
 		}
@@ -167,6 +167,8 @@ func (client *Client) parseResp() (resp interface{}, err error, streamResponse b
 		resp, err = client.genStream(res.typeName)
 		streamResponse = true
 		return
+	case typeKind_NoRtnValue:
+		return nil, nil, false
 	default:
 		return nil, errInvalidKind, false
 	}
@@ -267,7 +269,7 @@ func IsNonSeriousError(err error) bool {
 //如果返回值是normal类型，则resp就是对应类型的value。
 //如果是error类型，则resp就是nil，然后返回NonSeriousError
 //如果是message类型，则resp是[]byte
-//如果是stream类型，则resp就是reader或者writer
+//如果是stream类型，则resp就是io.ReadCloser、io.WriteCloser或者io.ReadWriteCloser
 func (client *Client) Call(service, method string, args ...*RequestArg) (resp interface{}, err error) {
 	if client.closed {
 		return nil, errClientClosed

@@ -12,6 +12,7 @@ const (
 	typeKind_Stream
 	typeKind_Message
 	typeKind_Error
+	typeKind_NoRtnValue
 )
 
 const headLen = 8
