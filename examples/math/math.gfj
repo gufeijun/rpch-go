@@ -1,0 +1,16 @@
+service Math{
+    uint32 Add(uint32,uint32)
+    int32 Sub(int32,int32)
+    int32 Multiply(TwoNum)
+    Quotient Divide(uint64,uint64)
+}
+
+message Quotient{
+    uint64 Quo
+    uint64 Rem
+}
+
+message TwoNum{
+    int32 A
+    int32 B
+}
