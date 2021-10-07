@@ -5,45 +5,65 @@
 package gfj
 
 import (
-    "io"
-    rpch "github.com/gufeijun/rpch-go"
+	rpch "github.com/gufeijun/rpch-go"
+	"io"
 )
 
-type FileService interface{
+type FileService interface {
 	OpenFile(string) (stream io.ReadWriter, onFinish func(), err error)
+	UploadFile(io.Reader, string) error
 }
 
 func RegisterFileService(impl FileService, svr *rpch.Server) {
-	methods := map[string]*rpch.MethodDesc {
-        "OpenFile": rpch.BuildMethodDesc(impl, "OpenFile", "stream"),
+	methods := map[string]*rpch.MethodDesc{
+		"OpenFile":   rpch.BuildMethodDesc(impl, "OpenFile", "stream"),
+		"UploadFile": rpch.BuildMethodDesc(impl, "UploadFile", ""),
 	}
 	service := &rpch.Service{
 		Impl:    impl,
-        Name:    "File",
+		Name:    "File",
 		Methods: methods,
 	}
 	svr.Register(service)
 }
 
-type FileServiceClient struct{
-    client *rpch.Client
+type FileServiceClient struct {
+	client *rpch.Client
 }
 
 func NewFileServiceClient(client *rpch.Client) *FileServiceClient {
-    return &FileServiceClient{
+	return &FileServiceClient{
 		client: client,
 	}
 }
 
 func (c *FileServiceClient) OpenFile(arg1 string) (res io.ReadWriteCloser, err error) {
-    resp, err := c.client.Call("File", "OpenFile",
+	resp, err := c.client.Call("File", "OpenFile",
 		&rpch.RequestArg{
-            TypeKind: 0,
-            TypeName: "string",
-            Data:     arg1,
+			TypeKind: 0,
+			TypeName: "string",
+			Data:     arg1,
 		})
 	if resp == nil {
 		return
 	}
-	return resp.(io.ReadWriteCloser),err
+	return resp.(io.ReadWriteCloser), err
+}
+
+func (c *FileServiceClient) UploadFile(arg1 io.Reader, arg2 string) (err error) {
+	resp, err := c.client.Call("File", "UploadFile",
+		&rpch.RequestArg{
+			TypeKind: 1,
+			TypeName: "istream",
+			Data:     arg1,
+		},
+		&rpch.RequestArg{
+			TypeKind: 0,
+			TypeName: "string",
+			Data:     arg2,
+		})
+	if resp == nil {
+		return
+	}
+	return err
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fileserver/gfj"
 	"io"
 	"os"
@@ -29,16 +30,26 @@ func readSomething(client *gfj.FileServiceClient) error {
 
 }
 
+func uploadFile(client *gfj.FileServiceClient) error {
+	var buff bytes.Buffer
+	//这里模拟打开了一个文件
+	if _, err := io.WriteString(&buff, "hello world\n"); err != nil {
+		return err
+	}
+	return client.UploadFile(&buff, "uploadedFile.txt")
+}
+
 func main() {
 	conn, err := rpch.NewClient("127.0.0.1:8080")
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 	client := gfj.NewFileServiceClient(conn)
-	if err := writeSomething(client); err != nil {
-		panic(err)
-	}
-	if err := readSomething(client); err != nil {
+	check(uploadFile(client))
+	check(writeSomething(client))
+	check(readSomething(client))
+}
+
+func check(err error) {
+	if err != nil {
 		panic(err)
 	}
 }

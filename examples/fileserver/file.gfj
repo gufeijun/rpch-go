@@ -1,3 +1,6 @@
 service File{
+    //打开服务端的文件，并返回句柄给客户端
     stream OpenFile(string)
+    //上传客户端的文件
+    void UploadFile(istream,string)
 }

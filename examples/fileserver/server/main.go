@@ -20,6 +20,16 @@ func (*fileService) OpenFile(filepath string) (stream io.ReadWriter, onFinish fu
 	}, nil
 }
 
+func (*fileService) UploadFile(r io.Reader, filename string) error {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = io.Copy(file, r)
+	return err
+}
+
 func main() {
 	svr := rpch.NewServer()
 	gfj.RegisterFileService(new(fileService), svr)
