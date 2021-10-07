@@ -9,6 +9,8 @@ import (
 	rpch "github.com/gufeijun/rpch-go"
 )
 
+const addr = "127.0.0.1:8080"
+
 type mathService struct{}
 
 func (*mathService) Add(a int32, b int32) (int32, error) {
@@ -18,7 +20,7 @@ func (*mathService) Add(a int32, b int32) (int32, error) {
 func startServer() {
 	svr := rpch.NewServer()
 	gfj.RegisterMathService(new(mathService), svr)
-	panic(svr.ListenAndServe("tcp", "127.0.0.1:8080"))
+	panic(svr.ListenAndServe("tcp", addr))
 }
 
 func main() {
@@ -26,7 +28,7 @@ func main() {
 	time.Sleep(time.Second)
 
 	//客户端
-	conn, err := rpch.NewClient("127.0.0.1:8080")
+	conn, err := rpch.NewClient(addr)
 	if err != nil {
 		panic(err)
 	}

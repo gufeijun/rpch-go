@@ -34,7 +34,7 @@ const addr = "127.0.0.1:8080"
 func startServer() {
 	svr := rpch.NewServer()
 	gfj.RegisterMathService(new(mathService), svr)
-	panic(svr.ListenAndServe("tcp", "127.0.0.1:8080"))
+	panic(svr.ListenAndServe("tcp", addr))
 }
 
 func main() {

@@ -15,8 +15,6 @@ func writeSomething(client *gfj.FileServiceClient) error {
 	}
 	defer file.Close()
 	_, err = file.Write([]byte("hello world\n"))
-	if err != nil {
-	}
 	return err
 }
 
