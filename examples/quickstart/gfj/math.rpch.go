@@ -5,49 +5,49 @@
 package gfj
 
 import (
-    rpch "github.com/gufeijun/rpch-go"
+	rpch "github.com/gufeijun/rpch-go"
 )
 
-type MathService interface{
+type MathService interface {
 	Add(int32, int32) (int32, error)
 }
 
 func RegisterMathService(impl MathService, svr *rpch.Server) {
-	methods := map[string]*rpch.MethodDesc {
-        "Add": rpch.BuildMethodDesc(impl, "Add", "int32"),
+	methods := map[string]*rpch.MethodDesc{
+		"Add": rpch.BuildMethodDesc(impl, "Add", "int32"),
 	}
 	service := &rpch.Service{
 		Impl:    impl,
-        Name:    "Math",
+		Name:    "Math",
 		Methods: methods,
 	}
 	svr.Register(service)
 }
 
-type MathServiceClient struct{
-    client *rpch.Client
+type MathServiceClient struct {
+	client *rpch.Client
 }
 
 func NewMathServiceClient(client *rpch.Client) *MathServiceClient {
-    return &MathServiceClient{
+	return &MathServiceClient{
 		client: client,
 	}
 }
 
 func (c *MathServiceClient) Add(arg1 int32, arg2 int32) (res int32, err error) {
-    resp, err := c.client.Call("Math", "Add",
+	resp, err := c.client.Call("Math", "Add",
 		&rpch.RequestArg{
-            TypeKind: 0,
-            TypeName: "int32",
-            Data:     arg1,
+			TypeKind: 0,
+			TypeName: "int32",
+			Data:     arg1,
 		},
 		&rpch.RequestArg{
-            TypeKind: 0,
-            TypeName: "int32",
-            Data:     arg2,
+			TypeKind: 0,
+			TypeName: "int32",
+			Data:     arg2,
 		})
 	if resp == nil {
 		return
 	}
-	return resp.(int32),err
+	return resp.(int32), err
 }
