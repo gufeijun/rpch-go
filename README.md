@@ -58,11 +58,11 @@ message Response{
 }
 ```
 
-我们要将加法的两个操作数组合成一个message: Request ，返回值就算是返回一个in32，也必须给其封装成一个message: Response，极其不方便。直接写成这样可能更直观：
+我们要将加法的两个操作数组合成一个message: Request ，返回值就算是返回一个in32，也必须给其封装成一个message: Response，极其不方便。而我们的IDL可能更直观：
 
 ```protobuf
 service Math{
-    rpc Add(int32,int32) returns (int32) {}
+    int32 Add(int32,int32)
 }
 ```
 
