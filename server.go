@@ -201,8 +201,8 @@ func Serve(l net.Listener) error {
 	return DefaultServer.Serve(l)
 }
 
-func ListenAndServe(network string, addr string) error {
-	return DefaultServer.ListenAndServe(network, addr)
+func ListenAndServe(addr string) error {
+	return DefaultServer.ListenAndServe(addr)
 }
 
 func Go(f func()) {
