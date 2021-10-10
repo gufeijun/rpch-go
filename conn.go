@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"reflect"
 	"sync"
@@ -16,6 +17,8 @@ const magic = 0x00686A6C
 const seqSize = 8
 
 type conn struct {
+	onfinish  func()
+	finished  bool
 	svr       *Server
 	rwc       net.Conn
 	bufr      *bufio.Reader
@@ -125,8 +128,13 @@ func (c *conn) sendResponse(rtns []reflect.Value, methodDesc *MethodDesc, seq ui
 	if methodDesc.RetTypeKind == typeKind_Stream {
 		//如果是返回stream的话，会有三个参数：stream，func()以及error
 		if !rtns[1].IsNil() {
-			defer rtns[1].Interface().(func())()
+			c.onfinish = rtns[1].Interface().(func())
 		}
+		defer func() {
+			if c.finished {
+				c.onfinish()
+			}
+		}()
 	}
 	put64(c.seqsBuf, seq)
 	c.bufw.Write(c.seqsBuf)
@@ -176,7 +184,7 @@ func (c *conn) responseStream(v interface{}, typeName string) error {
 	c.bufw.Flush()
 	switch typeName {
 	case "istream":
-		return c.responseIStream(v.(io.Reader))
+		return c.responseIOStream(&readWriter{Reader: v.(io.Reader), Writer: ioutil.Discard})
 	case "ostream":
 		return c.responseOStream(v.(io.Writer))
 	case "stream":
@@ -187,18 +195,17 @@ func (c *conn) responseStream(v interface{}, typeName string) error {
 }
 
 func (c *conn) responseIOStream(rw io.ReadWriter) error {
-	ch := make(chan error)
+	ch := make(chan bool)
 	Go(func() {
-		ch <- c.responseOStream(rw)
+		c.responseIStream(rw)
+		ch <- true
 	})
-	err := c.responseIStream(rw)
-	if err != nil {
-		c.close()
+	err := c.responseOStream(rw)
+	if c.onfinish != nil {
+		c.onfinish()
+		c.finished = true
 	}
-	er := <-ch
-	if err == nil {
-		err = er
-	}
+	<-ch
 	return err
 }
 
@@ -208,24 +215,8 @@ func (c *conn) responseOStream(w io.Writer) error {
 	return err
 }
 
-func (c *conn) responseIStream(r io.Reader) error {
-	cw := &errWriter{w: &chunkWriter{w: c.rwc}}
-	_, err := io.Copy(cw, r)
-	cw.err = err
+func (c *conn) responseIStream(r io.Reader) {
+	cw := &chunkWriter{w: c.rwc}
+	io.Copy(cw, r)
 	cw.Write(nil)
-	return cw.err
-}
-
-type errWriter struct {
-	w   io.Writer
-	err error
-}
-
-func (ew *errWriter) Write(p []byte) (int, error) {
-	if ew.err != nil {
-		return 0, ew.err
-	}
-	var n int
-	n, ew.err = ew.w.Write(p)
-	return n, ew.err
 }

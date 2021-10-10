@@ -178,6 +178,8 @@ func (client *Client) genStream(typeName string) (interface{}, error) {
 	r := client.conn.bufr
 	w := client.conn.rwc
 	switch typeName {
+	case "istream":
+		fallthrough
 	case "stream":
 		return &chunkReadWriteCloser{
 			client: client,
@@ -185,11 +187,6 @@ func (client *Client) genStream(typeName string) (interface{}, error) {
 				Reader: &chunkReader{bufr: r},
 				Writer: &chunkWriter{w: w},
 			}}, nil
-	case "istream":
-		return &chunkReadCloser{
-			client:      client,
-			chunkReader: &chunkReader{bufr: r},
-		}, nil
 	case "ostream":
 		return &chunkWriteCloser{
 			client:      client,
@@ -200,20 +197,10 @@ func (client *Client) genStream(typeName string) (interface{}, error) {
 	}
 }
 
-type chunkReadCloser struct {
-	*chunkReader
-	client *Client
-}
-
-func (crc *chunkReadCloser) Close() error {
-	_, err := io.Copy(ioutil.Discard, crc.chunkReader)
-	crc.client.setFree()
-	return err
-}
-
 type chunkWriteCloser struct {
 	*chunkWriter
 	client *Client
+	wLock  sync.Mutex
 }
 
 func (cwc *chunkWriteCloser) Write(p []byte) (int, error) {
@@ -222,7 +209,10 @@ func (cwc *chunkWriteCloser) Write(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	return cwc.chunkWriter.Write(p)
+	cwc.wLock.Lock()
+	n, err := cwc.chunkWriter.Write(p)
+	cwc.wLock.Unlock()
+	return n, err
 }
 
 func (cwc *chunkWriteCloser) Close() error {
@@ -232,6 +222,8 @@ func (cwc *chunkWriteCloser) Close() error {
 }
 
 type chunkReadWriteCloser struct {
+	rLock sync.Mutex
+	wLock sync.Mutex
 	*readWriter
 	client *Client
 }
@@ -240,12 +232,24 @@ func (crwc *chunkReadWriteCloser) Write(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	return crwc.readWriter.Write(p)
+	crwc.wLock.Lock()
+	n, err := crwc.readWriter.Write(p)
+	crwc.wLock.Unlock()
+	return n, err
+}
+
+func (crwc *chunkReadWriteCloser) Read(p []byte) (int, error) {
+	crwc.rLock.Lock()
+	n, err := crwc.readWriter.Read(p)
+	crwc.rLock.Unlock()
+	return n, err
 }
 
 func (crwc *chunkReadWriteCloser) Close() error {
-	_, err := io.Copy(ioutil.Discard, crwc.readWriter)
+	crwc.wLock.Lock()
 	_, er := crwc.readWriter.Write(nil)
+	crwc.wLock.Unlock()
+	_, err := io.Copy(ioutil.Discard, crwc)
 	if err == nil {
 		err = er
 	}
