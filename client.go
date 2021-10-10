@@ -12,7 +12,7 @@ import (
 
 const respHeadLen = 16
 
-type Client struct {
+type Conn struct {
 	conn        *conn
 	seq         uint64
 	seqLock     sync.Mutex
@@ -22,7 +22,7 @@ type Client struct {
 	readyCh     chan bool
 }
 
-func NewClient(addr string) (*Client, error) {
+func Dial(addr string) (*Conn, error) {
 	rwc, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func NewClient(addr string) (*Client, error) {
 		return nil, err
 	}
 	conn := newConn(nil, rwc)
-	cli := &Client{
+	cli := &Conn{
 		respHeadBuf: make([]byte, respHeadLen),
 		readyCh:     make(chan bool, 1),
 		conn:        conn,
@@ -42,19 +42,19 @@ func NewClient(addr string) (*Client, error) {
 	return cli, nil
 }
 
-func (client *Client) waitFree() {
+func (client *Conn) waitFree() {
 	<-client.readyCh
 }
 
-func (client *Client) setFree() {
+func (client *Conn) setFree() {
 	client.readyCh <- true
 }
 
-func (client *Client) setBusy() {
+func (client *Conn) setBusy() {
 	<-client.readyCh
 }
 
-func (client *Client) getSeq() uint64 {
+func (client *Conn) getSeq() uint64 {
 	client.seqLock.Lock()
 	seq := client.seq
 	client.seq++
@@ -62,7 +62,7 @@ func (client *Client) getSeq() uint64 {
 	return seq
 }
 
-func (client *Client) Close() error {
+func (client *Conn) Close() error {
 	var err error
 	client.closeOnce.Do(func() {
 		err = client.conn.rwc.Close()
@@ -76,7 +76,7 @@ type RequestArg struct {
 	Data     interface{}
 }
 
-func (client *Client) call(requestLine string, args []*RequestArg) (resp interface{}, err error) {
+func (client *Conn) call(requestLine string, args []*RequestArg) (resp interface{}, err error) {
 	client.waitFree()
 	var streamResponse bool
 	defer func() {
@@ -121,7 +121,7 @@ type response struct {
 	data     []byte
 }
 
-func (client *Client) readRespLine() (resp *response, err error) {
+func (client *Conn) readRespLine() (resp *response, err error) {
 	r := client.conn.bufr
 	resp = new(response)
 	buf := client.respHeadBuf
@@ -142,7 +142,7 @@ func (client *Client) readRespLine() (resp *response, err error) {
 	return
 }
 
-func (client *Client) parseResp() (resp interface{}, err error, streamResponse bool) {
+func (client *Conn) parseResp() (resp interface{}, err error, streamResponse bool) {
 	res, err := client.readRespLine()
 	if err != nil {
 		return
@@ -174,7 +174,7 @@ func (client *Client) parseResp() (resp interface{}, err error, streamResponse b
 	}
 }
 
-func (client *Client) genStream(typeName string) (interface{}, error) {
+func (client *Conn) genStream(typeName string) (interface{}, error) {
 	r := client.conn.bufr
 	w := client.conn.rwc
 	switch typeName {
@@ -199,7 +199,7 @@ func (client *Client) genStream(typeName string) (interface{}, error) {
 
 type chunkWriteCloser struct {
 	*chunkWriter
-	client *Client
+	client *Conn
 	wLock  sync.Mutex
 }
 
@@ -225,7 +225,7 @@ type chunkReadWriteCloser struct {
 	rLock sync.Mutex
 	wLock sync.Mutex
 	*readWriter
-	client *Client
+	client *Conn
 }
 
 func (crwc *chunkReadWriteCloser) Write(p []byte) (int, error) {
@@ -274,7 +274,7 @@ func IsNonSeriousError(err error) bool {
 //如果是error类型，则resp就是nil，然后返回NonSeriousError
 //如果是message类型，则resp是[]byte
 //如果是stream类型，则resp就是io.ReadCloser、io.WriteCloser或者io.ReadWriteCloser
-func (client *Client) Call(service, method string, args ...*RequestArg) (resp interface{}, err error) {
+func (client *Conn) Call(service, method string, args ...*RequestArg) (resp interface{}, err error) {
 	if client.closed {
 		return nil, errClientClosed
 	}

@@ -26,8 +26,8 @@ func NewServer() *Server {
 	}
 }
 
-func (svr *Server) ListenAndServe(network string, addr string) error {
-	l, err := net.Listen(network, addr)
+func (svr *Server) ListenAndServe(addr string) error {
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
