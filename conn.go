@@ -184,6 +184,7 @@ func (c *conn) responseStream(v interface{}, typeName string) error {
 	c.bufw.Flush()
 	switch typeName {
 	case "istream":
+		//client should write 0\r\n\r\n to tell the server to end stream reading
 		return c.responseIOStream(&readWriter{Reader: v.(io.Reader), Writer: ioutil.Discard})
 	case "ostream":
 		return c.responseOStream(v.(io.Writer))
@@ -215,8 +216,11 @@ func (c *conn) responseOStream(w io.Writer) error {
 	return err
 }
 
-func (c *conn) responseIStream(r io.Reader) {
+func (c *conn) responseIStream(r io.Reader) error {
 	cw := &chunkWriter{w: c.rwc}
-	io.Copy(cw, r)
-	cw.Write(nil)
+	if _, err := io.Copy(cw, r); err != nil {
+		return err
+	}
+	_, err := cw.Write(nil)
+	return err
 }

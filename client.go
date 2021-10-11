@@ -105,13 +105,27 @@ func (client *Conn) call(requestLine string, args []*RequestArg) (resp interface
 	}
 	client.conn.bufw.Flush()
 	if reqStreamArg != nil {
-		err = client.conn.responseStream(reqStreamArg.Data, reqStreamArg.TypeName)
+		err = client.sendStream(reqStreamArg)
 		if err != nil {
 			return
 		}
 	}
 	resp, err, streamResponse = client.parseResp()
 	return
+}
+
+func (client *Conn) sendStream(reqStreamArg *RequestArg) error {
+	data := reqStreamArg.Data
+	switch reqStreamArg.TypeName {
+	case "istream":
+		return client.conn.responseIStream(data.(io.Reader))
+	case "ostream":
+		return client.conn.responseOStream(data.(io.Writer))
+	case "stream":
+		return client.conn.responseIOStream(data.(io.ReadWriter))
+	default:
+		return errBadStreamType
+	}
 }
 
 type response struct {

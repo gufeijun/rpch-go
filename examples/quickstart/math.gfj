@@ -1,0 +1,3 @@
+service Math{
+    int32 Add(int32,int32)
+}
