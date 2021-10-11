@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/gufeijun/rpch-go/examples/quickstart/gfj"
+	"quickstart/gfj"
 
 	rpch "github.com/gufeijun/rpch-go"
 )

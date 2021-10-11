@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/gufeijun/rpch-go/examples/fileserver/gfj"
+	"fileserver/gfj"
 
 	rpch "github.com/gufeijun/rpch-go"
 )

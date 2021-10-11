@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gufeijun/rpch-go/examples/math/gfj"
+	"math/gfj"
 
 	rpch "github.com/gufeijun/rpch-go"
 )
