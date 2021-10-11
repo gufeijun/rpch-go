@@ -84,9 +84,9 @@ func (*fileService) OpenFile(filepath string) (stream io.ReadWriter, onFinish fu
 
 //客户端代码：
 file, _ := client.OpenFile("test.txt")
+defer file.Close()
 ioutil.ReadAll(file)
 file.Write([]byte("hello world\n"))
-file.Close()
 ```
 
 服务端提供了一个RPC服务，它的用途是将服务端主机上的一个文件句柄返回给客户端。客户端能够宛如操作本机的一个文件一样直接读写服务端的文件句柄。你可能觉得这个不可思议，但这个确实是能在我的框架中实际运行的代码。我觉得这个带来的好处是很明显的，两端想读写对端的Reader或者Writer，根本无需读取出数据再传输，直接就可以把你的流句柄交给对面，省略掉很多不必要的步骤。虽然流类型的使用有一些限制，但只有使用得当，绝对能巨大提高开发效率。
@@ -126,13 +126,13 @@ func (*mathService) Add(a int32, b int32) (int32, error) {
 
 s := rpch.NewServer()
 gfj.RegisterMathService(new(mathService),svr)	//此函数由编译器生成
-svr.ListenAndServe("tcp","127.0.0.1:8080")
+svr.ListenAndServe("127.0.0.1:8080")
 ```
 
 **client**：
 
 ```go
-conn, _ := rpch.NewClient(addr)
+conn, _ := rpch.Dial(addr)
 client := gfj.NewMathServiceClient(conn)	//此函数由编译器生成
 result, _ := client.Add(2, 3)
 
