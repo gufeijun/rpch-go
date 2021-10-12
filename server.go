@@ -31,6 +31,7 @@ func (svr *Server) ListenAndServe(addr string) error {
 	if err != nil {
 		return err
 	}
+	defer l.Close()
 	return svr.Serve(l)
 }
 
