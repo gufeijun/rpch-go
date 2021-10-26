@@ -106,7 +106,7 @@ service Math{
 }
 ```
 
-编译器编译：`hgen -dir gfj math.gfj `。即会生成一个gfj/math.rpch.go文件，gfj是自动生成代码所在的包，其中包括了服务注册以及客户端调用服务的一些方法。
+编译器编译：`hgen -dir gfj -lang go math.gfj `。即会生成一个gfj/math.rpch.go文件，gfj是自动生成代码所在的包，其中包括了服务注册以及客户端调用服务的一些方法。
 
 **server:**
 

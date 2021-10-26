@@ -9,7 +9,7 @@ app:main.go
 	go build -o app main.go
 	
 gfj:
-	hgen math.gfj
+	hgen -lang go service.gfj
 .PHONY:clean
 clean:
 	-rm gfj -rf

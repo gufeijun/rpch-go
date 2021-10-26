@@ -13,7 +13,7 @@ bin/client:client/main.go gfj
 	go build -o $@ $<
 	
 gfj:
-	hgen file.gfj
+	hgen -lang go file.gfj
 bin:
 	@mkdir bin
 .PHONY:clean
