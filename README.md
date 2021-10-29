@@ -150,7 +150,7 @@ result, _ := client.Add(2, 3)
 
 2. 流类型不能再作为message类型的成员。(否则hgen编译期间会报错)
 
-3. 如果流类型作为服务的传入参数，则服务端实现该服务时，该流只能在实现服务的方法内部使用，超出这个范围，流将失效，也就意味着将流暂存待以后读取或写入是非法的，应该尽早将流消费掉。如定义服务：
+3. 如果流类型作为服务的传入参数(如下面的UploadFile)，则服务端实现该服务时，这个流入参只能在服务方法内部使用，超出这个范围，流将失效，也就意味着将流暂存待以后读取或写入是非法的，应该尽早将数据从流中消费掉。如定义服务：
 
    ```protobuf
    service File{
@@ -163,14 +163,15 @@ result, _ := client.Add(2, 3)
    ```go
    func (*fileService) UploadFile(r io.Reader, filename string) error {
    	//只能在该方法内部使用r这个io.Reader
-       r.Read(p)	//合法
+       r.Read(p)				//合法
+       saveAndUseLater(p)		//非法
    }
    
    //soemthing else
    r.Read(p)		//非法
    ```
 
-4. 如果流类型作为服务的返回值，对于服务端，该服务的方法返回值会多出一个回调函数(由编译器生成)，框架会在流的数据读取或写入完毕后调用这个函数，你需要将一些释放资源或者延时执行操作放入其中，如定义了服务：
+4. 如果流类型作为服务的返回值(如下面的OpenFile)，对于服务端，则编译得到的方法返回值会多出一个回调函数onFinish，rpch框架会在流的数据读取或写入完毕后调用这个函数，你需要将一些释放资源或者延时执行操作放入其中，如定义了服务：
 
    ```protobuf
    service File{
@@ -178,9 +179,10 @@ result, _ := client.Add(2, 3)
    }
    ```
 
-   服务端实现该服务：
+   服务端关于该服务代码：
 
    ```go
+   //返回值多出了onFinish
    func (*fileService) OpenFile(filepath string) (stream io.ReadWriter, onFinish func(), err error) {
    	file, _ := os.OpenFile(filepath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
        //defer file.Close()	非法  不允许在该方法中就将流关闭
@@ -189,18 +191,20 @@ result, _ := client.Add(2, 3)
    	}, nil
    }
    ```
-
+   
    对于客户端，如果接收到一个流类型，得到的流类型同时会是一个Closer，你需要在操作流结束后，将流关闭，否则在流未关闭的情况下，发起另一个rpc请求会阻塞，客户端调用OpenFile服务：
-
+   
+   客户端调用该服务代码：
+   
    ```go
    client := gfj.NewFileServiceClient(conn)
    file, _ := client.OpenFile("test.txt")		//file is a io.ReadWriteCloser
    // ... 
    //do something to file
    
-   //client.CallAService()		//不合法，上一个请求得到的流file还未关闭,会阻塞此处
-   file.Close()
-   client.CallAService()		//合法，上一个请求得到的流file已经关闭
+   //client.CallAnotherService()		//不合法，上一个请求得到的流file还未关闭,会阻塞此处
+   file.Close()						//务必在使用完后关闭此流
+   client.CallAnotherService()			//合法，上一个请求得到的流file已经关闭
    ```
 
 # 安装
