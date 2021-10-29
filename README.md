@@ -221,3 +221,8 @@ go get github.com/gufeijun/rpch-go
 + 支持udp、http协议
 + 支持服务注册以及服务发现
 
+# references
+
++ [rpch-c](https://github.com/gufeijun/rpch-c)：rpch框架的c语言实现。
++ [rpch-go](https://github.com/gufeijun/rpch-go)：rpch框架的go语言实现。
++ [rpch-node](https://github.com/gufeijun/rpch-node)：rpch框架的nodejs实现。
