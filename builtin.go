@@ -3,6 +3,7 @@ package rpch
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -102,13 +103,13 @@ func uint64Marshal(v reflect.Value) []byte {
 
 func float32Marshal(v reflect.Value) []byte {
 	return putHeader("float32", 4, func(buf []byte) {
-		put32(buf, uint32(v.Interface().(float32)))
+		put32(buf, math.Float32bits(v.Interface().(float32)))
 	})
 }
 
 func float64Marshal(v reflect.Value) []byte {
 	return putHeader("float64", 8, func(buf []byte) {
-		put64(buf, uint64(v.Interface().(float64)))
+		put64(buf, math.Float64bits(v.Interface().(float64)))
 	})
 }
 
@@ -228,7 +229,7 @@ func int64Unmarshal(buf []byte) (*reflect.Value, error) {
 func float32Unmarshal(buf []byte) (*reflect.Value, error) {
 	return newType(4, "float32", buf, func(buf []byte) *reflect.Value {
 		num := get32(buf)
-		v := reflect.ValueOf(float32(num))
+		v := reflect.ValueOf(math.Float32frombits(num))
 		return &v
 	})
 }
@@ -236,7 +237,7 @@ func float32Unmarshal(buf []byte) (*reflect.Value, error) {
 func float64Unmarshal(buf []byte) (*reflect.Value, error) {
 	return newType(8, "float64", buf, func(buf []byte) *reflect.Value {
 		num := get64(buf)
-		v := reflect.ValueOf(float64(num))
+		v := reflect.ValueOf(math.Float64frombits(num))
 		return &v
 	})
 }
